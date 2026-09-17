@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Délais — suivi des échéances de procédure fiscale</title>
+<style>
+:root{
+  --noir:#18160f;
+  --noir-2:#232019;
+  --blanc:#f7f4ec;
+  --blanc-2:#efeadd;
+  --gris-1:#8d8577;
+  --gris-2:#c9c2b2;
+  --gris-3:#e2ddce;
+  --filet:#c9c2b2;
+  --rouge:#a3231b;
+  --rouge-fonce:#5c1310;
+  --rouge-bg:#f6e3e1;
+  --ambre:#8a5a10;
+  --ambre-bg:#f3e6c9;
+  --calme:#8d8577;
+  --depasse-bg:#3a120f;
+  --depasse-fg:#f7e6e4;
+  --font-cond:"Archivo Narrow","Roboto Condensed","Arial Narrow",Arial,sans-serif;
+  --font-mono:"Roboto Mono","SF Mono",Consolas,Menlo,"Courier New",monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-cond);
+  background:var(--blanc);
+  color:var(--noir);
+  font-size:14px;
+  line-height:1.4;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
+a{color:inherit;}
+.tab{font-variant-numeric:tabular-nums;font-family:var(--font-mono);}
+.sc{
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  font-size:11px;
+  font-weight:600;
+  color:var(--gris-1);
+}
+
+/* ---- layout ---- */
+.app{display:flex;min-height:100vh;}
+.sidebar{
+  width:216px;flex:none;
+  background:var(--noir);
+  color:var(--blanc-2);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;
+}
+.sidebar .brand{
+  padding:22px 20px 16px;
+  border-bottom:1px solid #35311f;
+}
+.sidebar .brand .name{
+  font-size:20px;font-weight:700;letter-spacing:.02em;
+}
+.sidebar .brand .sub{
+  margin-top:4px;font-size:10.5px;color:#9c937c;letter-spacing:.06em;text-transform:uppercase;
+}
+.sidebar nav{padding:14px 0;flex:1;}
+.sidebar nav a{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 20px;
+  text-decoration:none;
+  color:#cfc8b4;
+  font-size:13px;
+  letter-spacing:.03em;
+  border-left:3px solid transparent;
+}
+.sidebar nav a .mk{
+  width:6px;height:6px;flex:none;border:1px solid #7c7460;
+}
+.sidebar nav a:hover{background:#221f16;color:var(--blanc-2);}
+.sidebar nav a.active{
+  background:#221f16;color:#fff;border-left-color:var(--blanc-2);font-weight:600;
+}
+.sidebar nav a.active .mk{background:var(--blanc-2);border-color:var(--blanc-2);}
+.sidebar .foot{
+  padding:14px 20px 18px;border-top:1px solid #35311f;
+  font-size:10.5px;line-height:1.5;color:#736c59;
+}
+.app-body{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{
+  background:var(--noir-2);
+  color:var(--blanc-2);
+  padding:12px 28px;
+  border-bottom:1px solid #35311f;
+}
+.breadcrumb{font-size:12px;letter-spacing:.03em;color:#b3ab96;}
+.breadcrumb a{text-decoration:none;color:#d8d1bd;}
+.breadcrumb a:hover{text-decoration:underline;}
+.breadcrumb .sep{margin:0 7px;color:#666052;}
+.breadcrumb .cur{color:#fff;}
+main{flex:1;padding:26px 32px 60px;max-width:1180px;width:100%;}
+
+h1{
+  font-size:22px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em;
+}
+h2{font-size:15px;margin:0 0 10px;font-weight:700;}
+.page-sub{color:var(--gris-1);font-size:12.5px;margin-bottom:22px;}
+.page-head{margin-bottom:20px;}
+
+/* ---- tables ---- */
+table.dense{width:100%;border-collapse:collapse;}
+table.dense th{
+  text-align:left;
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--gris-1);
+  font-weight:600;
+  padding:6px 10px;
+  border-bottom:1px solid var(--noir);
+}
+table.dense td{
+  padding:9px 10px;
+  border-bottom:1px solid var(--gris-3);
+  vertical-align:middle;
+}
+table.dense tr:hover td{background:var(--blanc-2);}
+table.dense td.num, table.dense th.num{text-align:right;}
+table.dense a.rowlink{text-decoration:none;color:var(--noir);font-weight:600;}
+table.dense a.rowlink:hover{text-decoration:underline;}
+tr.clickable{cursor:pointer;}
+
+/* ---- badges d'urgence ---- */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--font-mono);font-size:11.5px;font-weight:700;
+  letter-spacing:.03em;
+  padding:3px 7px;
+  border:1px solid transparent;
+  white-space:nowrap;
+}
+.badge-marker{font-size:10px;line-height:1;}
+.niv-depasse{background:var(--depasse-bg);color:var(--depasse-fg);}
+.niv-rouge{background:var(--rouge-bg);color:var(--rouge-fonce);border-color:var(--rouge);}
+.niv-ambre{background:var(--ambre-bg);color:var(--ambre);border-color:var(--ambre);}
+.niv-calme{background:transparent;color:var(--calme);border-color:var(--gris-3);}
+.niv-realise{background:transparent;color:#3c6b3f;border-color:#a9c4ab;}
+.niv-muted{background:transparent;color:var(--gris-1);border-color:var(--gris-3);}
+
+/* ---- boutons / liens ---- */
+.btn{
+  display:inline-block;
+  background:var(--noir);color:var(--blanc);
+  border:1px solid var(--noir);
+  padding:8px 16px;
+  font-size:12.5px;letter-spacing:.03em;font-weight:600;
+  cursor:pointer;text-decoration:none;
+}
+.btn:hover{background:#000;}
+.btn.secondary{background:transparent;color:var(--noir);}
+.btn.secondary:hover{background:var(--blanc-2);}
+.btn.danger{background:transparent;color:var(--rouge-fonce);border-color:var(--rouge);}
+.btn.danger:hover{background:var(--rouge-bg);}
+.btn[disabled]{opacity:.4;cursor:not-allowed;}
+
+/* ---- formulaires ---- */
+.field{margin-bottom:16px;}
+.field label{display:block;margin-bottom:5px;}
+.field input[type=text],.field input[type=date],.field input[type=number],.field select,.field textarea{
+  width:100%;
+  border:none;border-bottom:1px solid var(--noir);
+  background:transparent;
+  padding:7px 2px;
+  font-size:13.5px;
+}
+.field input.tab{font-family:var(--font-mono);}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-bottom:2px solid var(--noir);}
+.field .hint{font-size:11px;color:var(--gris-1);margin-top:4px;}
+.checkline{display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;}
+.checkline input{margin-top:3px;}
+.checkline .lbl{font-size:13px;}
+.field-row{display:flex;gap:20px;}
+.field-row .field{flex:1;}
+
+/* ---- panneaux / surfaces ---- */
+.surface{
+  background:var(--blanc-2);
+  border:1px solid var(--gris-3);
+  padding:18px 20px;
+}
+.two-col{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start;}
+@media (max-width:920px){.two-col{grid-template-columns:minmax(0,1fr);}}
+.field-row{min-width:0;}
+.field-row .field{min-width:0;}
+.checkline .lbl{min-width:0;}
+.card-delai .row1{min-width:0;}
+.card-delai .row1 .titre{min-width:0;}
+
+.card-delai{
+  border:1px solid var(--gris-3);
+  background:#fff;
+  padding:12px 14px;
+  margin-bottom:10px;
+}
+.card-delai .row1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.card-delai .titre{font-weight:700;font-size:13px;}
+.card-delai .art{font-size:10.5px;color:var(--gris-1);margin-left:6px;}
+.card-delai .meta{margin-top:6px;font-size:12px;color:#4a4638;}
+.card-delai .meta .tab{color:var(--noir);}
+.card-delai .manque{margin-top:6px;font-size:12px;color:var(--gris-1);font-style:italic;}
+.card-delai.muted{opacity:.55;}
+.card-delai .regime-toggle{margin-top:8px;}
+.card-delai details{margin-top:6px;}
+.card-delai summary{cursor:pointer;font-size:11px;color:var(--gris-1);letter-spacing:.03em;}
+.card-delai .regime-txt{margin-top:6px;font-size:12px;color:#4a4638;border-top:1px solid var(--gris-3);padding-top:6px;}
+
+/* ---- empty / loading ---- */
+.empty{
+  border:1px dashed var(--gris-2);
+  padding:40px 24px;text-align:center;color:var(--gris-1);
+}
+.empty .btn{margin-top:14px;}
+.loading{padding:60px 0;text-align:center;color:var(--gris-1);font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;}
+
+/* ---- wizard ---- */
+.steps{display:flex;gap:0;margin-bottom:26px;border-bottom:1px solid var(--gris-3);}
+.steps .step{
+  padding:8px 0;margin-right:30px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--gris-1);
+  border-bottom:2px solid transparent;
+}
+.steps .step.active{color:var(--noir);font-weight:700;border-color:var(--noir);}
+.steps .step.done{color:#3c6b3f;}
+.wizard-actions{margin-top:24px;display:flex;gap:10px;}
+
+/* ---- reference ---- */
+.regime-tag{font-size:11px;color:var(--gris-1);}
+
+/* ---- frise ---- */
+.frise-wrap{overflow-x:auto;}
+.frise-axis{
+  position:relative;height:52px;border-bottom:1px solid var(--noir);margin-bottom:6px;min-width:900px;
+}
+.frise-axis .tick{position:absolute;bottom:0;width:1px;background:var(--gris-2);height:8px;}
+.frise-axis .tick.today{background:var(--noir);height:52px;width:1px;}
+.frise-axis .lbl{
+  position:absolute;transform:translateX(-50%);
+  font-family:var(--font-mono);font-size:10px;white-space:nowrap;color:#4a4638;
+}
+.frise-axis .lbl.today-lbl{font-weight:700;color:var(--noir);}
+.frise-lane{display:flex;align-items:stretch;border-bottom:1px solid var(--gris-3);min-width:900px;}
+.frise-lane .lane-label{
+  width:230px;flex:none;padding:10px 12px;font-size:11.5px;
+}
+.frise-lane .lane-label .art{display:block;font-size:10px;color:var(--gris-1);margin-top:2px;}
+.frise-lane .lane-track{position:relative;flex:1;padding:10px 0;min-height:20px;}
+.lane-track .bar{position:absolute;top:12px;height:12px;border:1px solid var(--noir);}
+.lane-track .bar.niv-depasse{background:var(--depasse-bg);border-color:var(--depasse-bg);}
+.lane-track .bar.niv-rouge{background:var(--rouge-bg);border-color:var(--rouge);}
+.lane-track .bar.niv-ambre{background:var(--ambre-bg);border-color:var(--ambre);}
+.lane-track .bar.niv-calme{background:var(--gris-3);border-color:var(--gris-2);}
+.lane-track .bar.niv-realise{background:#dfe9df;border-color:#7fa583;}
+.lane-track .susp{position:absolute;top:12px;height:12px;background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.55) 0,rgba(0,0,0,.55) 2px,transparent 2px,transparent 6px);}
+.lane-track .now-tick{position:absolute;top:6px;width:1px;height:24px;background:var(--noir);}
+.lane-track .now-dot{position:absolute;top:15px;width:6px;height:6px;background:var(--noir);border-radius:50%;transform:translateX(-2.5px);}
+.lane-track .placeholder{position:absolute;top:14px;left:0;right:0;height:8px;border-top:1px dashed var(--gris-2);}
+.lane-track .track-txt{position:absolute;top:9px;left:4px;font-size:11px;color:var(--gris-1);font-style:italic;}
+.frise-legend{display:flex;gap:22px;flex-wrap:wrap;margin-top:18px;font-size:11px;color:var(--gris-1);}
+.frise-legend .item{display:flex;align-items:center;gap:6px;}
+.frise-legend .sw{width:14px;height:10px;border:1px solid var(--gris-2);display:inline-block;}
+
+/* ---- suspensions ---- */
+.susp-list{border-top:1px solid var(--gris-3);margin-top:6px;}
+.susp-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gris-3);font-size:12.5px;}
+.susp-row .rm{color:var(--rouge-fonce);cursor:pointer;background:none;border:none;font-size:11px;text-decoration:underline;padding:0;}
+
+.note{font-size:11px;color:var(--gris-1);margin-top:20px;padding-top:14px;border-top:1px solid var(--gris-3);}
+
+/* ---- téléphone : la barre latérale passe en bandeau horizontal, les tableaux défilent dans leur propre conteneur ---- */
+@media (max-width:480px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:static;}
+  .sidebar .brand{padding:14px 16px 10px;}
+  .sidebar nav{display:flex;flex-wrap:wrap;padding:4px 10px;}
+  .sidebar nav a{padding:8px 10px;border-left:none;border-bottom:3px solid transparent;}
+  .sidebar nav a.active{border-left:none;border-bottom-color:var(--blanc-2);}
+  .sidebar .foot{display:none;}
+  main{padding:18px 16px 40px;}
+  table.dense{display:block;overflow-x:auto;white-space:nowrap;}
+  .field-row{flex-direction:column;gap:0;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="name">Délais</div>
+      <div class="sub">Procédure de vérification</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="foot">Maquette académique — sans lien avec un système d'information réel. Aucune donnée réelle.</div>
+  </aside>
+  <div class="app-body">
+    <header class="topbar"><div class="breadcrumb" id="breadcrumb"></div></header>
+    <main id="content"><div class="loading">Chargement…</div></main>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ======================================================================
+   CONFIGURATION
+====================================================================== */
+const STORAGE_KEY = "delais_app_data_v2";
+
+const SEUILS_DEFAUT = {
+  jours: { ambre: 10, rouge: 3 },
+  mois:  { ambre: 30, rouge: 10 }
+};
+
+const FERIES_FIXES = [
+  { md:"01-01", nom:"Jour de l'an" },
+  { md:"01-11", nom:"Anniversaire de la présentation du Manifeste de l'Indépendance" },
+  { md:"05-01", nom:"Fête du Travail" },
+  { md:"07-30", nom:"Fête du Trône" },
+  { md:"08-14", nom:"Allégeance Oued Eddahab" },
+  { md:"08-20", nom:"Révolution du Roi et du Peuple" },
+  { md:"08-21", nom:"Fête de la Jeunesse" },
+  { md:"11-06", nom:"Anniversaire de la Marche Verte" },
+  { md:"11-18", nom:"Fête de l'Indépendance" }
+];
+
+const FERIES_VARIABLES_DEFAUT = [
+  { nom:"Aïd al-Fitr (1er jour)", date:"2026-03-20" },
+  { nom:"Aïd al-Fitr (2e jour)", date:"2026-03-21" },
+  { nom:"Aïd al-Adha (1er jour)", date:"2026-05-27" },
+  { nom:"Aïd al-Adha (2e jour)", date:"2026-05-28" },
+  { nom:"1er Moharram", date:"2026-06-16" },
+  { nom:"Aïd al-Mawlid", date:"2026-08-25" }
+];
+
+const REGIME_LABELS = {
+  nullite:   "Nullité de la procédure de rectification",
+  forclusion:"Forclusion",
+  aucune:    "Absence de sanction procédurale automatique"
+};
+
+const DELAI_DEFS = [
+  { id:"prevenance", ordre:1, intitule:"Délai de prévenance (avis et charte)", article:"Art. 212-I CGI",
+    regime:"nullite", incombe:"Administration", unite:"jours",
+    dureeTexte:"15 jours francs minimum avant la date fixée pour le début du contrôle",
+    departTexte:"Notification de l'avis de vérification" },
+  { id:"engagement", ordre:2, intitule:"Engagement effectif du contrôle", article:"Art. 212-I CGI",
+    regime:"aucune", incombe:"Administration", unite:"jours",
+    dureeTexte:"5 jours ouvrables",
+    departTexte:"Date fixée pour le début du contrôle" },
+  { id:"duree_controle", ordre:3, intitule:"Durée du contrôle sur place", article:"Art. 212-I CGI",
+    regime:"aucune", incombe:"Administration", unite:"mois",
+    dureeTexte:"3 mois, portée à 6 mois si un exercice vérifié dépasse 50 MDH de chiffre d'affaires déclaré hors taxe",
+    departTexte:"Procès-verbal de début du contrôle sur place" },
+  { id:"notif_1ere_lettre", ordre:4, intitule:"Notification de la première lettre", article:"Art. 220-I CGI",
+    regime:"aucune", incombe:"Administration", unite:"mois",
+    dureeTexte:"3 mois",
+    departTexte:"Clôture du contrôle" },
+  { id:"reponse_contribuable", ordre:5, intitule:"Réponse du contribuable", article:"Art. 220-I CGI",
+    regime:"forclusion", incombe:"Contribuable", unite:"jours",
+    dureeTexte:"30 jours francs",
+    departTexte:"Réception de la première lettre" },
+  { id:"notif_2e_lettre", ordre:6, intitule:"Notification de la seconde lettre", article:"Art. 220-II CGI",
+    regime:"nullite", incombe:"Administration", unite:"jours",
+    dureeTexte:"60 jours francs",
+    departTexte:"Réception de la réponse du contribuable" }
+];
+
+/* ======================================================================
+   UTILITAIRES DE DATE
+====================================================================== */
+function parseISO(s){
+  if(!s) return null;
+  const p = s.split("-");
+  return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+}
+function toISO(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDate(d){
+  if(!d) return "—";
+  if(typeof d === "string") d = parseISO(d);
+  return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+}
+function fmtDateLongue(d){
+  if(!d) return "—";
+  if(typeof d === "string") d = parseISO(d);
+  const mois=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  return d.getDate()+" "+mois[d.getMonth()]+" "+d.getFullYear();
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function stripTime(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(); }
+function diffCalendarDays(a,b){ return Math.round((stripTime(b)-stripTime(a))/86400000); }
+function isWeekend(d){ const w=d.getDay(); return w===0||w===6; }
+function isFerie(d, feries){
+  const iso = toISO(d);
+  const md = iso.slice(5);
+  if(FERIES_FIXES.some(f=>f.md===md)) return true;
+  if((feries.variables||[]).some(f=>f.date===iso)) return true;
+  return false;
+}
+function anneeFeriesRenseignee(d, feries){
+  const annee = String(d.getFullYear());
+  return (feries.variables||[]).some(f=>f.date && f.date.slice(0,4)===annee);
+}
+function rollForward(d, feries){
+  let r = new Date(d);
+  while(isWeekend(r) || isFerie(r, feries)) r = addDays(r,1);
+  return r;
+}
+function addJoursFrancs(d,n){ return addDays(d, n+1); }
+function addJoursOuvrables(d,n,feries){
+  let count=0, r=new Date(d);
+  while(count<n){
+    r = addDays(r,1);
+    if(!isWeekend(r) && !isFerie(r,feries)) count++;
+  }
+  return r;
+}
+function addMonthsQuantieme(d,n){
+  const day = d.getDate();
+  const target = new Date(d.getFullYear(), d.getMonth()+n, 1);
+  const daysInTarget = new Date(target.getFullYear(), target.getMonth()+1, 0).getDate();
+  target.setDate(Math.min(day, daysInTarget));
+  return target;
+}
+function periodDaysInclusive(a,b){
+  const n = diffCalendarDays(a,b)+1;
+  return n>0?n:0;
+}
+function todayDate(){ const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
+
+/* ======================================================================
+   STOCKAGE
+====================================================================== */
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const seed = seedData();
+  saveState(seed);
+  return seed;
+}
+function saveState(state){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+let STATE = null;
+
+function seedData(){
+  function d(ref, exercices, seuil, dates, extra){
+    extra = extra || {};
+    return Object.assign({
+      id: "d_"+ref.toLowerCase().replace(/\s+/g,"_")+"_"+Math.random().toString(36).slice(2,7),
+      reference: ref,
+      exercices: exercices,
+      caDepasse50MDH: seuil,
+      dateNotificationAvis: dates.notif || null,
+      dateFixeeDebutControle: dates.fixee || null,
+      dateEngagementReel: dates.engagement || null,
+      dateClotureControle: dates.cloture || null,
+      dateNotificationPremiereLettre: dates.notif1 || null,
+      dateReceptionPremiereLettre: dates.recep1 || null,
+      sensReponse: dates.sens || "non_renseigne",
+      dateReceptionReponseContribuable: dates.recepRep || null,
+      dateNotificationSecondeLettre: dates.notif2 || null,
+      suspensions: [],
+      creeLe: new Date().toISOString()
+    }, extra);
+  }
+  const dossiers = [
+    d("Dossier A", [2023,2024], false, {
+      notif:"2026-01-05", fixee:"2026-01-25", engagement:"2026-02-01", cloture:"2026-06-06"
+    }),
+    d("Dossier B", [2024,2025], true, {
+      notif:"2026-02-20", fixee:"2026-03-10", engagement:"2026-03-22"
+    }),
+    d("Dossier C", [2022,2023], false, {
+      notif:"2026-05-24", fixee:"2026-06-10", engagement:"2026-06-20"
+    }, { suspensions:[ { id:"s1", type:"defaut_presentation", dateDebut:"2026-07-01", dateFin:"2026-07-10" } ] }),
+    d("Dossier D", [2025], false, {
+      notif:"2026-09-16"
+    })
+  ];
+  return {
+    dossiers: dossiers,
+    seuils: JSON.parse(JSON.stringify(SEUILS_DEFAUT)),
+    feries: { variables: JSON.parse(JSON.stringify(FERIES_VARIABLES_DEFAUT)) }
+  };
+}
+
+/* ======================================================================
+   MOTEUR DE CALCUL DES DÉLAIS
+====================================================================== */
+function sumSuspensions(list){
+  let defaut=0, etrangerBrut=0;
+  (list||[]).forEach(p=>{
+    if(!p.dateDebut || !p.dateFin) return;
+    const j = periodDaysInclusive(parseISO(p.dateDebut), parseISO(p.dateFin));
+    if(p.type==="defaut_presentation") defaut+=j; else etrangerBrut+=j;
+  });
+  const etrangerCappe = Math.min(etrangerBrut,180);
+  return { defaut, etrangerBrut, etrangerCappe, total: defaut+etrangerCappe };
+}
+
+function computeDelai(def, dos, feries, today){
+  function nonCalculable(manque){
+    return { def, etat:"non_calculable", manque, depart:null, echeance:null, joursRestants:null };
+  }
+  function sansObjet(){
+    return { def, etat:"sans_objet", depart:null, echeance:null, joursRestants:null };
+  }
+  function actifOuRealise(depart, echeance, realiseVal){
+    const realise = !!realiseVal;
+    return {
+      def, etat: realise?"realise":"actif",
+      depart, echeance,
+      realiseLe: (realise && typeof realiseVal === "string") ? parseISO(realiseVal) : null,
+      joursRestants: diffCalendarDays(today, echeance)
+    };
+  }
+
+  switch(def.id){
+    case "prevenance": {
+      if(!dos.dateNotificationAvis) return nonCalculable("date de notification de l'avis de vérification");
+      const depart = parseISO(dos.dateNotificationAvis);
+      const echeance = rollForward(addJoursFrancs(depart,15), feries);
+      return actifOuRealise(depart, echeance, dos.dateEngagementReel);
+    }
+    case "engagement": {
+      if(!dos.dateFixeeDebutControle) return nonCalculable("date fixée pour le début du contrôle");
+      const depart = parseISO(dos.dateFixeeDebutControle);
+      const echeance = rollForward(addJoursOuvrables(depart,5,feries), feries);
+      return actifOuRealise(depart, echeance, dos.dateEngagementReel);
+    }
+    case "duree_controle": {
+      if(!dos.dateEngagementReel) return nonCalculable("procès-verbal de début du contrôle (date effective d'engagement)");
+      const depart = parseISO(dos.dateEngagementReel);
+      const dureeMois = dos.caDepasse50MDH ? 6 : 3;
+      let base = addMonthsQuantieme(depart, dureeMois);
+      const susp = sumSuspensions(dos.suspensions);
+      base = addDays(base, susp.total);
+      const echeance = rollForward(base, feries);
+      const res = actifOuRealise(depart, echeance, dos.dateClotureControle);
+      res.dureeMoisAppliquee = dureeMois;
+      res.suspensions = susp;
+      return res;
+    }
+    case "notif_1ere_lettre": {
+      if(!dos.dateClotureControle) return nonCalculable("date de clôture du contrôle (procès-verbal de clôture)");
+      const depart = parseISO(dos.dateClotureControle);
+      const echeance = rollForward(addMonthsQuantieme(depart,3), feries);
+      return actifOuRealise(depart, echeance, dos.dateNotificationPremiereLettre);
+    }
+    case "reponse_contribuable": {
+      if(!dos.dateReceptionPremiereLettre) return nonCalculable("date de réception de la première lettre par le contribuable");
+      const depart = parseISO(dos.dateReceptionPremiereLettre);
+      const echeance = rollForward(addJoursFrancs(depart,30), feries);
+      const realiseVal = (dos.sensReponse && dos.sensReponse!=="non_renseigne") ? (dos.dateReceptionReponseContribuable || true) : null;
+      return actifOuRealise(depart, echeance, realiseVal);
+    }
+    case "notif_2e_lettre": {
+      if(!dos.sensReponse || dos.sensReponse === "non_renseigne")
+        return nonCalculable("sens de la réponse du contribuable");
+      if(dos.sensReponse !== "desaccord") return sansObjet();
+      if(!dos.dateReceptionReponseContribuable) return nonCalculable("date de réception, par l'administration, de la réponse du contribuable");
+      const depart = parseISO(dos.dateReceptionReponseContribuable);
+      const echeance = rollForward(addJoursFrancs(depart,60), feries);
+      return actifOuRealise(depart, echeance, dos.dateNotificationSecondeLettre);
+    }
+  }
+}
+
+function computeAllDelais(dos, state){
+  const today = todayDate();
+  return DELAI_DEFS.map(def => computeDelai(def, dos, state.feries, today));
+}
+
+function niveauUrgence(joursRestants, unite, seuils){
+  if(joursRestants < 0) return "depasse";
+  const s = seuils[unite];
+  if(joursRestants <= s.rouge) return "rouge";
+  if(joursRestants <= s.ambre) return "ambre";
+  return "calme";
+}
+
+function niveauOrdre(niv){
+  return { depasse:0, rouge:1, ambre:2, calme:3 }[niv];
+}
+
+function prochaineEcheanceActive(dos, state){
+  const résultats = computeAllDelais(dos, state);
+  const actifs = résultats.filter(r=>r.etat==="actif");
+  if(!actifs.length) return null;
+  actifs.sort((a,b)=> a.echeance - b.echeance);
+  return actifs[0];
+}
+
+function anneesFeriesManquantes(state){
+  const annees = new Set();
+  state.dossiers.forEach(dos=>{
+    computeAllDelais(dos, state).forEach(r=>{
+      if((r.etat==="actif"||r.etat==="realise") && r.echeance && !anneeFeriesRenseignee(r.echeance, state.feries)){
+        annees.add(r.echeance.getFullYear());
+      }
+    });
+  });
+  return Array.from(annees).sort();
+}
+
+/* ======================================================================
+   COMPOSANTS D'AFFICHAGE
+====================================================================== */
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function badgeUrgence(niveau, joursRestants){
+  let cls, marker, txt;
+  if(niveau==="depasse"){
+    cls="niv-depasse"; marker="●";
+    txt = "DÉPASSÉ · "+Math.abs(joursRestants)+" j";
+  } else if(niveau==="rouge"){
+    cls="niv-rouge"; marker="▲";
+    txt = joursRestants===0 ? "URGENT · CE JOUR" : "URGENT · "+joursRestants+" j";
+  } else if(niveau==="ambre"){
+    cls="niv-ambre"; marker="▪";
+    txt = "PROCHE · "+joursRestants+" j";
+  } else {
+    cls="niv-calme"; marker="";
+    txt = joursRestants+" j";
+  }
+  return '<span class="badge '+cls+'">'+(marker?'<span class="badge-marker">'+marker+'</span>':'')+txt+'</span>';
+}
+
+function badgeRealise(date){
+  return '<span class="badge niv-realise"><span class="badge-marker">✓</span>RÉALISÉ · '+fmtDate(date)+'</span>';
+}
+function badgeMuted(txt){
+  return '<span class="badge niv-muted">'+escapeHtml(txt)+'</span>';
+}
+function avertissementFeriesHtml(date, feries){
+  if(!date || anneeFeriesRenseignee(date, feries)) return "";
+  return '<div class="manque">Les fêtes religieuses de '+date.getFullYear()+' ne sont pas renseignées : les reports peuvent être inexacts.</div>';
+}
+
+/* ======================================================================
+   ROUTAGE
+====================================================================== */
+const ROUTES = [
+  { match:/^dossiers\/([^/]+)\/frise$/, view:(m)=>viewFrise(m[1]) },
+  { match:/^dossiers\/([^/]+)$/,        view:(m)=>viewDossierDetail(m[1]) },
+  { match:/^dossiers$/,                 view:()=>viewDossiers() },
+  { match:/^echeances$/,                view:()=>viewEcheances() },
+  { match:/^nouveau$/,                  view:()=>viewNouveau() },
+  { match:/^reference$/,                view:()=>viewReference() },
+  { match:/^parametres$/,               view:()=>viewParametres() }
+];
+
+const NAV_ITEMS = [
+  { hash:"#/dossiers", label:"Dossiers", key:"dossiers" },
+  { hash:"#/echeances", label:"Échéances", key:"echeances" },
+  { hash:"#/nouveau", label:"Nouveau dossier", key:"nouveau" },
+  { hash:"#/reference", label:"Référence", key:"reference" },
+  { hash:"#/parametres", label:"Paramètres", key:"parametres" }
+];
+
+function currentHashPath(){
+  return (location.hash || "#/dossiers").replace(/^#\/?/, "");
+}
+
+function renderNav(){
+  const path = currentHashPath();
+  const top = path.split("/")[0] || "dossiers";
+  document.getElementById("nav").innerHTML = NAV_ITEMS.map(it=>{
+    const active = it.key === top ? " active" : "";
+    return '<a href="'+it.hash+'" class="'+active.trim()+'"><span class="mk"></span>'+it.label+'</a>';
+  }).join("");
+}
+
+function setBreadcrumb(parts){
+  document.getElementById("breadcrumb").innerHTML = parts.map((p,i)=>{
+    const isLast = i===parts.length-1;
+    if(isLast) return '<span class="cur">'+escapeHtml(p.label)+'</span>';
+    return '<a href="'+p.hash+'">'+escapeHtml(p.label)+'</a><span class="sep">/</span>';
+  }).join("");
+}
+
+function route(){
+  renderNav();
+  const path = currentHashPath();
+  for(const r of ROUTES){
+    const m = path.match(r.match);
+    if(m){ r.view(m); return; }
+  }
+  document.getElementById("content").innerHTML = '<div class="empty">Page introuvable.<br><a class="btn secondary" href="#/dossiers" style="margin-top:14px;">Retour aux dossiers</a></div>';
+}
+
+function content(html){
+  document.getElementById("content").innerHTML = html;
+}
+
+/* ======================================================================
+   VUE — /dossiers (accueil)
+====================================================================== */
+function viewDossiers(){
+  setBreadcrumb([{label:"Dossiers"}]);
+  const dossiers = STATE.dossiers.slice();
+  const rows = dossiers.map(dos=>{
+    const prochaine = prochaineEcheanceActive(dos, STATE);
+    return { dos, prochaine };
+  });
+  rows.sort((a,b)=>{
+    if(a.prochaine && b.prochaine) return a.prochaine.echeance - b.prochaine.echeance;
+    if(a.prochaine) return -1;
+    if(b.prochaine) return 1;
+    return a.dos.reference.localeCompare(b.dos.reference);
+  });
+
+  if(!dossiers.length){
+    content(
+      '<div class="page-head"><h1>Dossiers</h1><div class="page-sub">Vérifications de comptabilité en cours de suivi.</div></div>'+
+      '<div class="empty">Aucun dossier enregistré.<br><a class="btn" href="#/nouveau" style="margin-top:14px;">Créer un dossier</a></div>'
+    );
+    return;
+  }
+
+  const body = rows.map(({dos,prochaine})=>{
+    let echCell;
+    if(prochaine){
+      const niv = niveauUrgence(prochaine.joursRestants, prochaine.def.unite, STATE.seuils);
+      echCell = badgeUrgence(niv, prochaine.joursRestants)+
+        '<div style="margin-top:4px;font-size:11.5px;color:#4a4638;">'+escapeHtml(prochaine.def.intitule)+' · <span class="tab">'+fmtDate(prochaine.echeance)+'</span></div>';
+    } else {
+      echCell = badgeMuted("Aucune échéance active");
+    }
+    return '<tr class="clickable" data-href="#/dossiers/'+dos.id+'">'+
+      '<td><a class="rowlink" href="#/dossiers/'+dos.id+'">'+escapeHtml(dos.reference)+'</a>'+
+        '<div style="font-size:11px;color:var(--gris-1);margin-top:2px;">Exercices '+escapeHtml((dos.exercices||[]).join(", "))+'</div></td>'+
+      '<td>'+echCell+'</td>'+
+      '<td class="num tab" style="color:var(--gris-1);font-size:11.5px;">'+fmtDate(dos.dateNotificationAvis)+'</td>'+
+    '</tr>';
+  }).join("");
+
+  content(
+    '<div class="page-head"><h1>Dossiers</h1><div class="page-sub">'+dossiers.length+' dossier(s) suivi(s). Une ligne par dossier, échéance la plus proche en tête.</div></div>'+
+    '<table class="dense"><thead><tr><th>Dossier</th><th>Prochaine échéance</th><th class="num">Avis notifié le</th></tr></thead>'+
+    '<tbody>'+body+'</tbody></table>'
+  );
+  wireRowLinks();
+}
+
+function wireRowLinks(){
+  document.querySelectorAll("tr.clickable[data-href]").forEach(tr=>{
+    tr.addEventListener("click", (e)=>{
+      if(e.target.tagName==="A") return;
+      location.hash = tr.getAttribute("data-href");
+    });
+  });
+}
+
+/* ======================================================================
+   VUE — /echeances (transversale)
+====================================================================== */
+function viewEcheances(){
+  setBreadcrumb([{label:"Échéances"}]);
+  let rows = [];
+  STATE.dossiers.forEach(dos=>{
+    computeAllDelais(dos, STATE).forEach(r=>{
+      if(r.etat==="actif") rows.push({dos, r});
+    });
+  });
+  rows.sort((a,b)=> a.r.echeance - b.r.echeance);
+
+  if(!rows.length){
+    content(
+      '<div class="page-head"><h1>Échéances</h1><div class="page-sub">Vue transversale de tous les dossiers.</div></div>'+
+      '<div class="empty">Aucune échéance active pour le moment.</div>'
+    );
+    return;
+  }
+
+  const body = rows.map(({dos,r})=>{
+    const niv = niveauUrgence(r.joursRestants, r.def.unite, STATE.seuils);
+    return '<tr class="clickable" data-href="#/dossiers/'+dos.id+'">'+
+      '<td>'+badgeUrgence(niv, r.joursRestants)+'</td>'+
+      '<td class="tab">'+fmtDate(r.echeance)+'</td>'+
+      '<td><a class="rowlink" href="#/dossiers/'+dos.id+'">'+escapeHtml(dos.reference)+'</a></td>'+
+      '<td>'+escapeHtml(r.def.intitule)+'<div style="font-size:10.5px;color:var(--gris-1);">'+escapeHtml(r.def.article)+'</div></td>'+
+    '</tr>';
+  }).join("");
+
+  content(
+    '<div class="page-head"><h1>Échéances</h1><div class="page-sub">'+rows.length+' échéance(s) active(s), toutes procédures confondues. Dépassées en tête, puis par ordre de proximité.</div></div>'+
+    '<table class="dense"><thead><tr><th>État</th><th>Échéance</th><th>Dossier</th><th>Délai</th></tr></thead>'+
+    '<tbody>'+body+'</tbody></table>'
+  );
+  wireRowLinks();
+}
+
+/* ======================================================================
+   VUE — /dossiers/:id (détail)
+====================================================================== */
+function findDossier(id){ return STATE.dossiers.find(d=>d.id===id); }
+
+function viewDossierDetail(id){
+  const dos = findDossier(id);
+  if(!dos){
+    setBreadcrumb([{label:"Dossiers",hash:"#/dossiers"},{label:"Introuvable"}]);
+    content('<div class="empty">Dossier introuvable.<br><a class="btn secondary" href="#/dossiers" style="margin-top:14px;">Retour aux dossiers</a></div>');
+    return;
+  }
+  setBreadcrumb([{label:"Dossiers",hash:"#/dossiers"},{label:dos.reference}]);
+
+  const résultats = computeAllDelais(dos, STATE);
+
+  const cartesDelais = résultats.map(r=>{
+    const def = r.def;
+    let inner;
+    if(r.etat==="non_calculable"){
+      inner = '<div class="row1"><span class="titre">'+escapeHtml(def.intitule)+'<span class="art">'+escapeHtml(def.article)+'</span></span>'+badgeMuted("NON CALCULABLE")+'</div>'+
+        '<div class="manque">En attente de : '+escapeHtml(r.manque)+'</div>';
+      return '<div class="card-delai muted">'+inner+regimeDetail(def)+'</div>';
+    }
+    if(r.etat==="sans_objet"){
+      inner = '<div class="row1"><span class="titre">'+escapeHtml(def.intitule)+'<span class="art">'+escapeHtml(def.article)+'</span></span>'+badgeMuted("SANS OBJET")+'</div>'+
+        '<div class="manque">La procédure a bifurqué : ce délai ne s\'applique pas à ce dossier.</div>';
+      return '<div class="card-delai muted">'+inner+regimeDetail(def)+'</div>';
+    }
+    if(r.etat==="realise"){
+      inner = '<div class="row1"><span class="titre">'+escapeHtml(def.intitule)+'<span class="art">'+escapeHtml(def.article)+'</span></span>'+badgeRealise(r.realiseLe)+'</div>'+
+        '<div class="meta">Point de départ : <span class="tab">'+fmtDate(r.depart)+'</span> · Échéance théorique : <span class="tab">'+fmtDate(r.echeance)+'</span></div>'+
+        avertissementFeriesHtml(r.echeance, STATE.feries);
+      return '<div class="card-delai">'+inner+regimeDetail(def)+'</div>';
+    }
+    const niv = niveauUrgence(r.joursRestants, def.unite, STATE.seuils);
+    let suspTxt = "";
+    if(r.suspensions && r.suspensions.total>0){
+      suspTxt = '<div class="meta">Suspensions : '+r.suspensions.total+' j ajoutés à l\'échéance (défaut de présentation : '+r.suspensions.defaut+' j · demandes à l\'étranger : '+r.suspensions.etrangerCappe+'/'+r.suspensions.etrangerBrut+' j, plafond 180 j)</div>';
+    }
+    inner = '<div class="row1"><span class="titre">'+escapeHtml(def.intitule)+'<span class="art">'+escapeHtml(def.article)+'</span></span>'+badgeUrgence(niv, r.joursRestants)+'</div>'+
+      '<div class="meta">Point de départ : <span class="tab">'+fmtDate(r.depart)+'</span> · Échéance : <span class="tab">'+fmtDate(r.echeance)+'</span></div>'+
+      suspTxt+
+      avertissementFeriesHtml(r.echeance, STATE.feries);
+    return '<div class="card-delai">'+inner+regimeDetail(def)+'</div>';
+  }).join("");
+
+  const suspList = (dos.suspensions||[]).map(s=>{
+    const label = s.type==="defaut_presentation" ? "Défaut de présentation des documents comptables" : "Demande de renseignements à l'étranger";
+    return '<div class="susp-row"><span>'+label+' · <span class="tab">'+fmtDate(s.dateDebut)+'</span> → <span class="tab">'+fmtDate(s.dateFin)+'</span></span>'+
+      '<button class="rm" data-rm-susp="'+s.id+'">retirer</button></div>';
+  }).join("") || '<div style="font-size:12px;color:var(--gris-1);padding:8px 0;">Aucune suspension enregistrée.</div>';
+
+  content(
+    '<div class="page-head"><h1>'+escapeHtml(dos.reference)+'</h1>'+
+    '<div class="page-sub">Exercices vérifiés : '+escapeHtml((dos.exercices||[]).join(", "))+' · '+(dos.caDepasse50MDH?"Seuil de 50 MDH franchi (durée de contrôle portée à 6 mois)":"Seuil de 50 MDH non franchi")+'</div>'+
+    '<a href="#/dossiers/'+dos.id+'/frise" class="btn secondary">Frise chronologique →</a>'+
+    '</div>'+
+    '<div class="two-col">'+
+      '<div class="surface">'+
+        '<h2>Instruction du dossier</h2>'+
+        '<form id="form-dates">'+
+          dateField("dateNotificationAvis","Notification de l'avis de vérification", dos.dateNotificationAvis)+
+          checkField("caDepasse50MDH","Le chiffre d'affaires déclaré dépasse 50 MDH hors taxe pour au moins un exercice vérifié", dos.caDepasse50MDH)+
+          dateField("dateFixeeDebutControle","Date fixée pour le début du contrôle", dos.dateFixeeDebutControle)+
+          dateField("dateEngagementReel","Procès-verbal de début (date effective d'engagement)", dos.dateEngagementReel)+
+          dateField("dateClotureControle","Clôture du contrôle (procès-verbal de clôture)", dos.dateClotureControle)+
+          dateField("dateNotificationPremiereLettre","Notification de la première lettre", dos.dateNotificationPremiereLettre)+
+          dateField("dateReceptionPremiereLettre","Réception de la première lettre par le contribuable", dos.dateReceptionPremiereLettre)+
+          selectSens(dos.sensReponse)+
+          dateField("dateReceptionReponseContribuable","Réception de la réponse (utile en cas de désaccord)", dos.dateReceptionReponseContribuable)+
+          dateField("dateNotificationSecondeLettre","Notification de la seconde lettre", dos.dateNotificationSecondeLettre)+
+          '<button type="submit" class="btn">Enregistrer les dates</button>'+
+        '</form>'+
+        '<h2 style="margin-top:26px;">Suspensions du contrôle sur place</h2>'+
+        '<div class="susp-list">'+suspList+'</div>'+
+        '<form id="form-susp" style="margin-top:14px;">'+
+          '<div class="field-row">'+
+            '<div class="field"><label class="sc">Type</label><select name="type"><option value="defaut_presentation">Défaut de présentation des documents</option><option value="demande_etranger">Demande de renseignements à l\'étranger</option></select></div>'+
+            '<div class="field"><label class="sc">Début</label><input type="date" name="dateDebut" class="tab" required></div>'+
+            '<div class="field"><label class="sc">Fin</label><input type="date" name="dateFin" class="tab" required></div>'+
+          '</div>'+
+          '<button type="submit" class="btn secondary">Ajouter la période</button>'+
+        '</form>'+
+        '<div style="margin-top:30px;"><button id="btn-suppr" class="btn danger">Supprimer ce dossier</button></div>'+
+      '</div>'+
+      '<div>'+
+        '<h2>Échéancier</h2>'+
+        cartesDelais+
+      '</div>'+
+    '</div>'
+  );
+
+  document.getElementById("form-dates").addEventListener("submit", function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    ["dateNotificationAvis","dateFixeeDebutControle","dateEngagementReel","dateClotureControle",
+     "dateNotificationPremiereLettre","dateReceptionPremiereLettre","dateReceptionReponseContribuable",
+     "dateNotificationSecondeLettre"].forEach(k=>{ dos[k] = fd.get(k) || null; });
+    dos.caDepasse50MDH = fd.get("caDepasse50MDH") === "on";
+    dos.sensReponse = fd.get("sensReponse") || "non_renseigne";
+    saveState(STATE);
+    viewDossierDetail(id);
+  });
+
+  document.getElementById("form-susp").addEventListener("submit", function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const debut = fd.get("dateDebut"), fin = fd.get("dateFin");
+    if(!debut || !fin || fin < debut) return;
+    dos.suspensions = dos.suspensions || [];
+    dos.suspensions.push({ id:"s_"+Math.random().toString(36).slice(2,8), type:fd.get("type"), dateDebut:debut, dateFin:fin });
+    saveState(STATE);
+    viewDossierDetail(id);
+  });
+
+  document.querySelectorAll("[data-rm-susp]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      dos.suspensions = (dos.suspensions||[]).filter(s=>s.id !== btn.getAttribute("data-rm-susp"));
+      saveState(STATE);
+      viewDossierDetail(id);
+    });
+  });
+
+  document.getElementById("btn-suppr").addEventListener("click", ()=>{
+    if(confirm("Supprimer définitivement « "+dos.reference+" » ? Cette action est irréversible.")){
+      STATE.dossiers = STATE.dossiers.filter(d=>d.id!==id);
+      saveState(STATE);
+      location.hash = "#/dossiers";
+    }
+  });
+}
+
+function regimeDetail(def){
+  return '<details><summary class="sc">Régime applicable</summary>'+
+    '<div class="regime-txt">'+escapeHtml(REGIME_LABELS[def.regime])+'. Incombe à : '+escapeHtml(def.incombe)+'. Durée : '+escapeHtml(def.dureeTexte)+'. ('+escapeHtml(def.article)+')</div>'+
+    '</details>';
+}
+
+function dateField(name,label,value){
+  return '<div class="field"><label class="sc">'+escapeHtml(label)+'</label>'+
+    '<input type="date" name="'+name+'" class="tab" value="'+(value||"")+'"></div>';
+}
+function checkField(name,label,value){
+  return '<div class="checkline"><input type="checkbox" id="'+name+'" name="'+name+'" '+(value?"checked":"")+'>'+
+    '<label for="'+name+'" class="lbl">'+escapeHtml(label)+'</label></div>';
+}
+function selectSens(value){
+  const opts = [
+    ["non_renseigne","Non renseigné"],
+    ["acceptation","Acceptation"],
+    ["desaccord","Désaccord"],
+    ["absence_reponse","Absence de réponse"]
+  ];
+  return '<div class="field"><label class="sc">Sens de la réponse du contribuable</label><select name="sensReponse">'+
+    opts.map(([v,l])=>'<option value="'+v+'" '+(v===value?"selected":"")+'>'+l+'</option>').join("")+
+    '</select></div>';
+}
+
+/* ======================================================================
+   VUE — /dossiers/:id/frise
+====================================================================== */
+function viewFrise(id){
+  const dos = findDossier(id);
+  if(!dos){
+    setBreadcrumb([{label:"Dossiers",hash:"#/dossiers"},{label:"Introuvable"}]);
+    content('<div class="empty">Dossier introuvable.</div>');
+    return;
+  }
+  setBreadcrumb([{label:"Dossiers",hash:"#/dossiers"},{label:dos.reference,hash:"#/dossiers/"+dos.id},{label:"Frise chronologique"}]);
+
+  const résultats = computeAllDelais(dos, STATE);
+  const today = todayDate();
+
+  let dates = [];
+  if(dos.dateNotificationAvis) dates.push(parseISO(dos.dateNotificationAvis));
+  résultats.forEach(r=>{
+    if(r.depart) dates.push(r.depart);
+    if(r.echeance) dates.push(r.echeance);
+  });
+  (dos.suspensions||[]).forEach(s=>{
+    if(s.dateDebut) dates.push(parseISO(s.dateDebut));
+    if(s.dateFin) dates.push(parseISO(s.dateFin));
+  });
+  dates.push(today);
+
+  let minDate = new Date(Math.min.apply(null, dates.map(d=>d.getTime())));
+  let maxDate = new Date(Math.max.apply(null, dates.map(d=>d.getTime())));
+  minDate = addDays(minDate, -10);
+  maxDate = addDays(maxDate, 10);
+  const span = maxDate.getTime() - minDate.getTime();
+  function pct(d){
+    if(!d) return null;
+    let v = (d.getTime()-minDate.getTime())/span*100;
+    if(v<0) v=0; if(v>100) v=100;
+    return v;
+  }
+
+  // axe principal : points de départ + échéances calculables, aujourd'hui
+  let axisMarks = [];
+  if(dos.dateNotificationAvis) axisMarks.push({d:parseISO(dos.dateNotificationAvis), lbl:"Notification avis"});
+  résultats.forEach(r=>{
+    if(r.echeance) axisMarks.push({d:r.echeance, lbl:r.def.intitule});
+  });
+  axisMarks.sort((a,b)=>a.d-b.d);
+
+  let axisHtml = '<div class="frise-axis">';
+  axisMarks.forEach((m,i)=>{
+    const x = pct(m.d);
+    const row = i%2;
+    axisHtml += '<div class="tick" style="left:'+x+'%;'+(row?'bottom:24px;':'bottom:0;')+'"></div>';
+    axisHtml += '<div class="lbl" style="left:'+x+'%;'+(row?'top:0;':'top:22px;')+'">'+fmtDate(m.d)+'</div>';
+  });
+  const xToday = pct(today);
+  axisHtml += '<div class="tick today" style="left:'+xToday+'%;"></div>';
+  axisHtml += '<div class="lbl today-lbl" style="left:'+xToday+'%;bottom:-16px;top:auto;">Aujourd\'hui '+fmtDate(today)+'</div>';
+  axisHtml += '</div>';
+
+  // lanes par délai
+  let lanesHtml = "";
+  résultats.forEach(r=>{
+    const def = r.def;
+    let track;
+    if(r.etat==="non_calculable"){
+      track = '<div class="placeholder"></div><div class="track-txt">non calculable — manque : '+escapeHtml(r.manque)+'</div>';
+    } else if(r.etat==="sans_objet"){
+      track = '<div class="placeholder"></div><div class="track-txt">sans objet</div>';
+    } else {
+      const x1 = pct(r.depart), x2 = pct(r.echeance);
+      const left = Math.min(x1,x2), width = Math.max(Math.abs(x2-x1), 0.4);
+      let cls = "niv-realise";
+      if(r.etat==="actif"){
+        cls = "niv-"+niveauUrgence(r.joursRestants, def.unite, STATE.seuils);
+      }
+      track = '<div class="bar '+cls+'" style="left:'+left+'%;width:'+width+'%;"></div>';
+      if(def.id==="duree_controle" && dos.suspensions && dos.suspensions.length){
+        dos.suspensions.forEach(s=>{
+          if(!s.dateDebut||!s.dateFin) return;
+          const sx1 = pct(parseISO(s.dateDebut)), sx2 = pct(parseISO(s.dateFin));
+          track += '<div class="susp" style="left:'+Math.min(sx1,sx2)+'%;width:'+Math.max(Math.abs(sx2-sx1),0.3)+'%;"></div>';
+        });
+      }
+    }
+    track += '<div class="now-tick" style="left:'+xToday+'%;"></div><div class="now-dot" style="left:'+xToday+'%;"></div>';
+    lanesHtml += '<div class="frise-lane"><div class="lane-label">'+escapeHtml(def.intitule)+'<span class="art">'+escapeHtml(def.article)+'</span></div>'+
+      '<div class="lane-track">'+track+'</div></div>';
+  });
+
+  content(
+    '<div class="page-head"><h1>'+escapeHtml(dos.reference)+' — Frise chronologique</h1>'+
+    '<div class="page-sub">Positions à échelle réelle. La ligne verticale pleine marque la date du jour.</div></div>'+
+    '<div class="frise-wrap">'+axisHtml+lanesHtml+'</div>'+
+    '<div class="frise-legend">'+
+      '<span class="item"><span class="sw" style="background:var(--depasse-bg);border-color:var(--depasse-bg);"></span>Dépassé</span>'+
+      '<span class="item"><span class="sw" style="background:var(--rouge-bg);border-color:var(--rouge);"></span>Urgent</span>'+
+      '<span class="item"><span class="sw" style="background:var(--ambre-bg);border-color:var(--ambre);"></span>Proche</span>'+
+      '<span class="item"><span class="sw" style="background:var(--gris-3);"></span>Calme</span>'+
+      '<span class="item"><span class="sw" style="background:#dfe9df;border-color:#7fa583;"></span>Réalisé</span>'+
+      '<span class="item"><span class="sw" style="background-image:repeating-linear-gradient(45deg,#999 0,#999 2px,transparent 2px,transparent 5px);"></span>Suspension</span>'+
+      '<span class="item">┊ Position courante</span>'+
+    '</div>'
+  );
+}
+
+/* ======================================================================
+   VUE — /nouveau (assistant en 3 étapes)
+====================================================================== */
+let wizard = null;
+function resetWizard(){
+  wizard = { step:1, reference:"", exercices:"", dateNotificationAvis:"", caDepasse50MDH:false };
+}
+
+function viewNouveau(){
+  if(!wizard) resetWizard();
+  setBreadcrumb([{label:"Dossiers",hash:"#/dossiers"},{label:"Nouveau dossier"}]);
+
+  const steps = '<div class="steps">'+
+    [1,2,3].map(n=>{
+      const label = n===1?"Identification":n===2?"Événement déclencheur":"Revue";
+      let cls = "step";
+      if(n===wizard.step) cls+=" active"; else if(n<wizard.step) cls+=" done";
+      return '<div class="'+cls+'">'+n+'. '+label+'</div>';
+    }).join("")+'</div>';
+
+  let body = "";
+  if(wizard.step===1){
+    body =
+      '<div class="field"><label class="sc">Référence du dossier</label>'+
+        '<input type="text" id="w-reference" value="'+escapeHtml(wizard.reference)+'" placeholder="ex. Dossier H"></div>'+
+      '<div class="field"><label class="sc">Exercices vérifiés</label>'+
+        '<input type="text" id="w-exercices" value="'+escapeHtml(wizard.exercices)+'" placeholder="ex. 2022, 2023, 2024" class="tab"></div>'+
+      '<div class="field hint" style="margin-top:-10px;">Aucune raison sociale, identifiant fiscal ou ICE ne doit être saisi : l\'outil ne manipule aucune donnée identifiante.</div>'+
+      '<div class="wizard-actions"><button class="btn" id="w-next">Continuer</button></div>';
+  } else if(wizard.step===2){
+    body =
+      dateField("w-notif","Date de notification de l'avis de vérification", wizard.dateNotificationAvis).replace('name="w-notif"','id="w-notif"')+
+      '<div class="checkline"><input type="checkbox" id="w-seuil" '+(wizard.caDepasse50MDH?"checked":"")+'>'+
+        '<label for="w-seuil" class="lbl">Le chiffre d\'affaires déclaré dépasse 50 MDH hors taxe pour au moins un exercice vérifié</label></div>'+
+      '<div class="wizard-actions"><button class="btn secondary" id="w-prev">Retour</button><button class="btn" id="w-next">Continuer</button></div>';
+  } else {
+    const temp = { dateNotificationAvis: wizard.dateNotificationAvis, caDepasse50MDH: wizard.caDepasse50MDH, suspensions:[] };
+    const résultats = computeAllDelais(temp, STATE);
+    const rows = résultats.map(r=>{
+      if(r.etat==="non_calculable") return '<tr><td>'+escapeHtml(r.def.intitule)+'</td><td colspan="2" style="color:var(--gris-1);font-style:italic;">non calculable — manque : '+escapeHtml(r.manque)+'</td></tr>';
+      if(r.etat==="sans_objet") return '<tr><td>'+escapeHtml(r.def.intitule)+'</td><td colspan="2" style="color:var(--gris-1);font-style:italic;">sans objet</td></tr>';
+      return '<tr><td>'+escapeHtml(r.def.intitule)+'</td><td class="tab">'+fmtDate(r.depart)+'</td><td class="tab">'+fmtDate(r.echeance)+'</td></tr>';
+    }).join("");
+    body =
+      '<div class="surface" style="margin-bottom:18px;">'+
+        '<div class="sc" style="margin-bottom:6px;">Référence</div><div style="margin-bottom:14px;">'+escapeHtml(wizard.reference||"—")+'</div>'+
+        '<div class="sc" style="margin-bottom:6px;">Exercices vérifiés</div><div style="margin-bottom:14px;">'+escapeHtml(wizard.exercices||"—")+'</div>'+
+        '<div class="sc" style="margin-bottom:6px;">Notification de l\'avis</div><div class="tab">'+fmtDate(wizard.dateNotificationAvis)+'</div>'+
+      '</div>'+
+      '<h2>Échéancier généré (lecture seule)</h2>'+
+      '<table class="dense"><thead><tr><th>Délai</th><th>Point de départ</th><th>Échéance</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="wizard-actions"><button class="btn secondary" id="w-prev">Retour</button><button class="btn" id="w-create">Créer le dossier</button></div>';
+  }
+
+  content('<div class="page-head"><h1>Nouveau dossier</h1></div>'+steps+body);
+
+  if(wizard.step===1){
+    document.getElementById("w-next").addEventListener("click", ()=>{
+      wizard.reference = document.getElementById("w-reference").value.trim();
+      wizard.exercices = document.getElementById("w-exercices").value.trim();
+      if(!wizard.reference || !wizard.exercices){ alert("Référence et exercices vérifiés sont requis."); return; }
+      wizard.step = 2; viewNouveau();
+    });
+  } else if(wizard.step===2){
+    document.getElementById("w-prev").addEventListener("click", ()=>{ wizard.step=1; viewNouveau(); });
+    document.getElementById("w-next").addEventListener("click", ()=>{
+      const v = document.getElementById("w-notif").value;
+      if(!v){ alert("La date de notification de l'avis est requise."); return; }
+      wizard.dateNotificationAvis = v;
+      wizard.caDepasse50MDH = document.getElementById("w-seuil").checked;
+      wizard.step = 3; viewNouveau();
+    });
+  } else {
+    document.getElementById("w-prev").addEventListener("click", ()=>{ wizard.step=2; viewNouveau(); });
+    document.getElementById("w-create").addEventListener("click", ()=>{
+      const exercices = wizard.exercices.split(/[,\s]+/).filter(Boolean);
+      const dos = {
+        id: "d_"+Math.random().toString(36).slice(2,10),
+        reference: wizard.reference,
+        exercices: exercices,
+        caDepasse50MDH: wizard.caDepasse50MDH,
+        dateNotificationAvis: wizard.dateNotificationAvis,
+        dateFixeeDebutControle: null, dateEngagementReel: null, dateClotureControle: null,
+        dateNotificationPremiereLettre: null, dateReceptionPremiereLettre: null,
+        sensReponse: "non_renseigne", dateReceptionReponseContribuable: null, dateNotificationSecondeLettre: null,
+        suspensions: [], creeLe: new Date().toISOString()
+      };
+      STATE.dossiers.unshift(dos);
+      saveState(STATE);
+      resetWizard();
+      location.hash = "#/dossiers/"+dos.id;
+    });
+  }
+}
+
+/* ======================================================================
+   VUE — /reference
+====================================================================== */
+function viewReference(){
+  setBreadcrumb([{label:"Référence"}]);
+  const rows = DELAI_DEFS.map(def=>{
+    return '<tr>'+
+      '<td>'+escapeHtml(def.intitule)+'<div class="regime-tag">'+escapeHtml(def.article)+'</div></td>'+
+      '<td>'+escapeHtml(def.departTexte)+'</td>'+
+      '<td>'+escapeHtml(def.dureeTexte)+'</td>'+
+      '<td>'+escapeHtml(def.incombe)+'</td>'+
+      '<td>'+escapeHtml(REGIME_LABELS[def.regime])+'</td>'+
+    '</tr>';
+  }).join("");
+
+  content(
+    '<div class="page-head"><h1>Référence</h1><div class="page-sub">Les six délais de la procédure de vérification de comptabilité, et les règles de calcul appliquées.</div></div>'+
+    '<table class="dense"><thead><tr><th>Délai</th><th>Point de départ</th><th>Durée</th><th>Incombe à</th><th>Régime</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>'+
+    '<h2 style="margin-top:30px;">Règles de calcul</h2>'+
+    '<div class="surface">'+
+      '<p style="margin-top:0;">Tous les délais de procédure sont francs (art. 245 CGI) : ni le jour de départ ni le jour d\'échéance ne comptent. Une lettre reçue le 10 mars ouvre un délai de 30 jours francs courant jusqu\'au 10 avril inclus. Un avis notifié le 1er permet un contrôle à partir du 16e jour.</p>'+
+      '<p>Si l\'échéance calculée tombe un jour férié ou chômé, elle est reportée au premier jour ouvrable suivant. Les samedis, dimanches et fériés situés à l\'intérieur d\'un délai comptent normalement : le caractère franc porte sur les extrémités, non sur le contenu de la période.</p>'+
+      '<p><strong>Exception :</strong> le délai d\'engagement du contrôle (5 jours) se compte en jours ouvrables — les samedis, dimanches et fériés sont exclus du décompte lui-même.</p>'+
+      '<p>Les durées exprimées en mois se calculent de quantième à quantième : 15 mars + 3 mois = 15 juin. Si le quantième n\'existe pas dans le mois d\'arrivée, l\'échéance est fixée au dernier jour de ce mois.</p>'+
+      '<p>Le seuil de 6 mois pour la durée du contrôle s\'applique dès qu\'un seul exercice vérifié dépasse 50 MDH de chiffre d\'affaires déclaré hors taxe — ni moyenne, ni cumul.</p>'+
+      '<p style="margin-bottom:0;">Les suspensions (défaut de présentation des documents comptables, demandes de renseignements à l\'étranger) n\'affectent que la durée du contrôle sur place. Le défaut de présentation n\'est plafonné à aucune durée ; les demandes à l\'étranger sont plafonnées à 180 jours cumulés.</p>'+
+    '</div>'+
+    '<div class="note">Notification et réception sont deux dates distinctes. Les délais de réponse du contribuable et de notification de la seconde lettre courent depuis la réception, jamais depuis l\'envoi.</div>'
+  );
+}
+
+/* ======================================================================
+   VUE — /parametres
+====================================================================== */
+function viewParametres(){
+  setBreadcrumb([{label:"Paramètres"}]);
+
+  const feriesFixesHtml = FERIES_FIXES.map(f=>{
+    const [m,j] = f.md.split("-");
+    return '<div class="susp-row"><span>'+escapeHtml(f.nom)+'</span><span class="tab">'+j+'/'+m+'</span></div>';
+  }).join("");
+
+  const feriesVarHtml = STATE.feries.variables.map((f,i)=>{
+    return '<div class="susp-row"><span>'+escapeHtml(f.nom)+' · <span class="tab">'+fmtDate(f.date)+'</span></span>'+
+      '<button class="rm" data-rm-ferie="'+i+'">retirer</button></div>';
+  }).join("") || '<div style="font-size:12px;color:var(--gris-1);padding:8px 0;">Aucune date enregistrée.</div>';
+
+  const anneesManquantes = anneesFeriesManquantes(STATE);
+  const avertissementAnneesHtml = anneesManquantes.length ?
+    '<div class="note">'+(anneesManquantes.length>1
+      ? 'Les fêtes religieuses des années suivantes ne sont pas renseignées : '+anneesManquantes.join(", ")+'.'
+      : 'Les fêtes religieuses de l\'année '+anneesManquantes[0]+' ne sont pas renseignées.')+
+    ' Les échéances calculées sur ces années peuvent faire l\'objet d\'un report inexact.</div>' : "";
+
+  content(
+    '<div class="page-head"><h1>Paramètres</h1><div class="page-sub">Seuils d\'alerte et calendrier des jours fériés.</div></div>'+
+    '<div class="two-col">'+
+      '<div class="surface">'+
+        '<h2>Seuils d\'alerte</h2>'+
+        '<form id="form-seuils">'+
+          '<div class="sc" style="margin-bottom:8px;">Délais comptés en jours</div>'+
+          '<div class="field-row">'+
+            '<div class="field"><label class="sc">Ambre à partir de (jours restants)</label><input type="number" min="0" class="tab" name="jours_ambre" value="'+STATE.seuils.jours.ambre+'"></div>'+
+            '<div class="field"><label class="sc">Rouge à partir de (jours restants)</label><input type="number" min="0" class="tab" name="jours_rouge" value="'+STATE.seuils.jours.rouge+'"></div>'+
+          '</div>'+
+          '<div class="sc" style="margin:16px 0 8px;">Délais comptés en mois</div>'+
+          '<div class="field-row">'+
+            '<div class="field"><label class="sc">Ambre à partir de (jours restants)</label><input type="number" min="0" class="tab" name="mois_ambre" value="'+STATE.seuils.mois.ambre+'"></div>'+
+            '<div class="field"><label class="sc">Rouge à partir de (jours restants)</label><input type="number" min="0" class="tab" name="mois_rouge" value="'+STATE.seuils.mois.rouge+'"></div>'+
+          '</div>'+
+          '<button type="submit" class="btn">Enregistrer les seuils</button>'+
+        '</form>'+
+        '<div class="note">Ces valeurs sont provisoires. Elles s\'appliquent immédiatement à l\'ensemble des dossiers.</div>'+
+      '</div>'+
+      '<div class="surface">'+
+        '<h2>Jours fériés — dates fixes</h2>'+
+        '<div class="susp-list">'+feriesFixesHtml+'</div>'+
+        '<h2 style="margin-top:22px;">Fêtes religieuses — dates variables</h2>'+
+        '<div class="page-sub" style="margin-bottom:10px;">À renseigner chaque année selon le calendrier hégirien.</div>'+
+        '<div class="susp-list">'+feriesVarHtml+'</div>'+
+        '<form id="form-ferie" style="margin-top:14px;">'+
+          '<div class="field-row">'+
+            '<div class="field"><label class="sc">Nom</label><input type="text" name="nom" placeholder="ex. Aïd al-Fitr"></div>'+
+            '<div class="field"><label class="sc">Date</label><input type="date" name="date" class="tab"></div>'+
+          '</div>'+
+          '<button type="submit" class="btn secondary">Ajouter la date</button>'+
+        '</form>'+
+        avertissementAnneesHtml+
+      '</div>'+
+    '</div>'+
+    '<div class="note"><button id="btn-reset" class="btn danger">Réinitialiser les données de démonstration</button></div>'
+  );
+
+  document.getElementById("form-seuils").addEventListener("submit",(e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    STATE.seuils = {
+      jours:{ ambre:Number(fd.get("jours_ambre")), rouge:Number(fd.get("jours_rouge")) },
+      mois:{ ambre:Number(fd.get("mois_ambre")), rouge:Number(fd.get("mois_rouge")) }
+    };
+    saveState(STATE);
+    viewParametres();
+  });
+
+  document.getElementById("form-ferie").addEventListener("submit",(e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const nom = fd.get("nom"), date = fd.get("date");
+    if(!nom || !date) return;
+    STATE.feries.variables.push({nom, date});
+    saveState(STATE);
+    viewParametres();
+  });
+
+  document.querySelectorAll("[data-rm-ferie]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      STATE.feries.variables.splice(Number(btn.getAttribute("data-rm-ferie")),1);
+      saveState(STATE);
+      viewParametres();
+    });
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", ()=>{
+    if(confirm("Réinitialiser toutes les données avec le jeu de démonstration ? Les dossiers actuels seront perdus.")){
+      STATE = seedData();
+      saveState(STATE);
+      location.hash = "#/dossiers";
+    }
+  });
+}
+
+/* ======================================================================
+   INITIALISATION
+====================================================================== */
+window.addEventListener("hashchange", route);
+
+setTimeout(function(){
+  STATE = loadState();
+  route();
+}, 250);
+
+})();
+</script>
+</body>
+</html>
